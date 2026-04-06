@@ -21,6 +21,56 @@ function isEmail(value) {
   return /\S+@\S+\.\S+/.test(value);
 }
 
+function mapForgotPasswordError(message) {
+  const raw = (message || "").trim();
+  const normalized = raw.toLowerCase();
+  const flattened = normalized.replace(/[_-]+/g, " ");
+
+  if (!normalized) {
+    return "We could not reset the password. Please verify your email and date of birth.";
+  }
+
+  if (
+    flattened.includes("not found") ||
+    flattened.includes("no account") ||
+    flattened.includes("no user") ||
+    flattened.includes("email does not exist")
+  ) {
+    return "Incorrect email or date of birth. Please check both details and try again.";
+  }
+
+  if (
+    flattened.includes("incorrect dob") ||
+    flattened.includes("invalid dob") ||
+    flattened.includes("wrong dob") ||
+    flattened.includes("date of birth") ||
+    flattened.includes("dob mismatch")
+  ) {
+    return "The date of birth does not match this account. Please enter the same DOB used during signup.";
+  }
+
+  if (
+    flattened.includes("invalid email") ||
+    flattened.includes("incorrect email") ||
+    flattened.includes("email mismatch")
+  ) {
+    return "The email address is incorrect. Please enter the registered email for this account.";
+  }
+
+  if (
+    flattened.includes("email") &&
+    (flattened.includes("dob") || flattened.includes("birth"))
+  ) {
+    return "The email and date of birth do not match our records. Please check both fields and try again.";
+  }
+
+  if (/^[a-z0-9_-]+$/.test(normalized)) {
+    return "Incorrect email or date of birth. Please check both details and try again.";
+  }
+
+  return raw;
+}
+
 export default function ForgotPassword() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -84,7 +134,7 @@ export default function ForgotPassword() {
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
-      setError(err.message || "Password reset failed.");
+      setError(mapForgotPasswordError(err.message));
     } finally {
       setLoading(false);
     }
