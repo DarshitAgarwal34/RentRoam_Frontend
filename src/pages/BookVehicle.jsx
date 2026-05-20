@@ -113,82 +113,77 @@ export default function BookVehicle() {
   async function handleSubmit(e) {
     e?.preventDefault();
 
-    if (!vehicle?.id) {
-      setError("Vehicle details are missing.");
-      return;
-    }
-
-    if (!pickupDate || !dropDate || !pickupCity.trim()) {
-      setError("Pickup date, drop date, and pickup city are required.");
-      return;
-    }
-
-    if (new Date(dropDate) < new Date(pickupDate)) {
-      setError("Drop date must be the same as or after the pickup date.");
-      return;
-    }
-
-    if (isVehicleBooked(vehicle.id)) {
-      setError("This vehicle has already been booked and is no longer available.");
-      return;
-    }
-
-    setSubmitting(true);
-    setError("");
-
-    const payload = {
-      vehicle_id: vehicle.id,
-      customer_id: user?.id,
-      owner_id: vehicle.owner_id || vehicle.owner?.id || null,
-      start_date: pickupDate,
-      end_date: dropDate,
-      pickup_city: pickupCity.trim(),
-      payment_method: paymentMethod,
-      notes: notes.trim(),
-      total_price: total,
-      status: "confirmed",
-    };
-
-    let bookingFromServer = null;
-    const candidatePaths = [`/api/customers/${user?.id}/bookings`];
-
-    for (const path of candidatePaths) {
-      try {
-        const response = await apiFetch(path, {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
-        bookingFromServer = response?.booking || response?.data?.booking || response;
-        break;
-      } catch {
-        // Keep trying candidate endpoints; frontend fallback still records the booking.
+    try {
+      if (!vehicle?.id) {
+        setError("Vehicle details are missing.");
+        return;
       }
+
+      if (!pickupDate || !dropDate || !pickupCity.trim()) {
+        setError("Pickup date, drop date, and pickup city are required.");
+        return;
+      }
+
+      if (new Date(dropDate) < new Date(pickupDate)) {
+        setError("Drop date must be the same as or after the pickup date.");
+        return;
+      }
+
+      if (isVehicleBooked(vehicle.id)) {
+        setError("This vehicle has already been booked and is no longer available.");
+        return;
+      }
+
+      setSubmitting(true);
+      setError("");
+
+      const payload = {
+        vehicle_id: vehicle.id,
+        customer_id: user?.id,
+        owner_id: vehicle.owner_id || vehicle.owner?.id || null,
+        start_date: pickupDate,
+        end_date: dropDate,
+        pickup_city: pickupCity.trim(),
+        payment_method: paymentMethod,
+        notes: notes.trim(),
+        total_price: total,
+        status: "confirmed",
+      };
+
+      const response = await apiFetch(`/api/customers/${user?.id}/bookings`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      const bookingFromServer = response?.booking || response?.data?.booking || response;
+
+      createLocalBooking({
+        booking: {
+          ...payload,
+          ...bookingFromServer,
+          vehicle_id: bookingFromServer?.vehicle_id || payload.vehicle_id,
+          customer_id: bookingFromServer?.customer_id || payload.customer_id,
+          owner_id: bookingFromServer?.owner_id || payload.owner_id,
+          total_price: bookingFromServer?.total_price ?? payload.total_price,
+        },
+        vehicle,
+        customer: {
+          id: user?.id,
+          name: user?.name || profile?.name || "Customer",
+          email: user?.email || profile?.email || "",
+        },
+        owner: {
+          id: vehicle.owner_id || vehicle.owner?.id || null,
+          name: vehicle.owner_name || vehicle.owner?.name || "Owner",
+          email: vehicle.owner_email || vehicle.owner?.email || "",
+        },
+      });
+
+      setSubmitted(true);
+      setSubmitting(false);
+    } catch (err) {
+      setError(err.message || "Booking failed.");
+      setSubmitting(false);
     }
-
-    createLocalBooking({
-      booking: {
-        ...payload,
-        ...bookingFromServer,
-        vehicle_id: bookingFromServer?.vehicle_id || payload.vehicle_id,
-        customer_id: bookingFromServer?.customer_id || payload.customer_id,
-        owner_id: bookingFromServer?.owner_id || payload.owner_id,
-        total_price: bookingFromServer?.total_price ?? payload.total_price,
-      },
-      vehicle,
-      customer: {
-        id: user?.id,
-        name: user?.name || profile?.name || "Customer",
-        email: user?.email || profile?.email || "",
-      },
-      owner: {
-        id: vehicle.owner_id || vehicle.owner?.id || null,
-        name: vehicle.owner_name || vehicle.owner?.name || "Owner",
-        email: vehicle.owner_email || vehicle.owner?.email || "",
-      },
-    });
-
-    setSubmitted(true);
-    setSubmitting(false);
   }
 
   if (!user) {

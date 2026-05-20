@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://app-9a52da8e-d0b1-4cf1-bb48-9a9865b7b55c.cleverapps.io",
+        target: "https://rentroam-backend.onrender.com",
         changeOrigin: true,
       },
     },
